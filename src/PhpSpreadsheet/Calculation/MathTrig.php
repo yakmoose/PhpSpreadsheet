@@ -1225,35 +1225,41 @@ class MathTrig
     {
         $arrayList = $args;
 
-        // Return value
-        $returnValue = 0;
-
         $sumArgs = Functions::flattenArray(array_shift($arrayList));
 
-        while (count($arrayList) > 0) {
-            $aArgsArray[] = Functions::flattenArray(array_shift($arrayList));
-            $conditions[] = Functions::ifCondition(array_shift($arrayList));
-        }
+        // apply the criteria to a list of true/false
+        $bits = array_map(function (array $item) {
 
-        // Loop through each set of arguments and conditions
-        foreach ($conditions as $index => $condition) {
-            $aArgs = $aArgsArray[$index];
+            //flatten
+            $aArgsArray = Functions::flattenArray(array_shift($item));
+            $condition = Functions::ifCondition(array_shift($item));
 
-            // Loop through arguments
-            foreach ($aArgs as $key => $arg) {
-                if (!is_numeric($arg)) {
+            //apply criteria to selections
+            return array_map(function($arg) use ($condition) {
+
+                if ( ! is_numeric($arg)) {
                     $arg = Calculation::wrapResult(strtoupper($arg));
                 }
-                $testCondition = '=' . $arg . $condition;
-                if (Calculation::getInstance()->_calculateFormulaValue($testCondition)) {
-                    // Is it a value within our criteria
-                    $returnValue += $sumArgs[$key];
-                }
-            }
-        }
 
-        // Return
-        return $returnValue;
+                $testCondition = '=' . $arg . $condition;
+
+                return Calculation::getInstance()->_calculateFormulaValue($testCondition);
+
+            }, $aArgsArray);
+
+        }, array_chunk($arrayList, 2, true));
+
+        //pick which ones we want... and the things
+        //sumifs says all criteria must be true, not an or.
+        $bits = array_map(function (...$args) {
+            //evaluate the row are all the conditions met?
+            return array_product($args);
+        }, ...$bits);
+
+        //filter and sum based on the criteria
+        return array_sum(array_filter($sumArgs, function ($v, $k) use ($bits) {
+            return true == $bits[$k];
+        }, ARRAY_FILTER_USE_BOTH));
     }
 
     /**

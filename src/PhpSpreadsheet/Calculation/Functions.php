@@ -267,6 +267,12 @@ class Functions
     public static function ifCondition($condition)
     {
         $condition = self::flattenSingleValue($condition);
+        //on occasion we get these as numbers, not as strings, so lets fix it
+        //as we can't treat a numeric as a string.
+        if (is_numeric($condition)) {
+            $condition = $condition ."";
+        }
+
         if (!isset($condition[0])) {
             $condition = '=""';
         }
